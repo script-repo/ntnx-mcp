@@ -83,6 +83,7 @@ Once connected, ask your AI agent:
 - [Product Requirements](specs/PRD.md)
 - [Deployment Guide](docs/DEPLOYMENT.md)
 - [Usage Guide](docs/USAGE.md)
+- [Tool Use Cases](docs/TOOL_USE_CASES.md)
 
 ## Requirements
 
