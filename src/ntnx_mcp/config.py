@@ -21,8 +21,10 @@ class Settings(BaseSettings):
     port: int = Field(default=9440, description="Prism Central API port")
     username: Optional[str] = Field(default=None, description="Username for basic auth")
     password: Optional[str] = Field(default=None, description="Password for basic auth")
-    api_key: Optional[str] = Field(default=None, description="API key for service accounts")
-    verify_ssl: bool = Field(default=True, description="Verify SSL certificates")
+    verify_ssl: bool = Field(
+        default=False,
+        description="Verify SSL certificates",
+    )
     timeout: int = Field(default=30, description="Request timeout in seconds")
 
     @field_validator("host", mode="before")
@@ -43,29 +45,26 @@ class Settings(BaseSettings):
     @property
     def has_credentials(self) -> bool:
         """Check if valid credentials are configured."""
-        return bool(self.api_key or (self.username and self.password))
+        return bool(self.username and self.password)
 
     def get_auth_header(self) -> dict[str, str]:
         """Get the authorization header for API requests."""
-        if self.api_key:
-            return {"X-Ntnx-Api-Key": self.api_key}
-        elif self.username and self.password:
+        if self.username and self.password:
             import base64
             credentials = base64.b64encode(
                 f"{self.username}:{self.password}".encode()
             ).decode()
             return {"Authorization": f"Basic {credentials}"}
-        else:
-            raise ValueError(
-                "No credentials configured. Set either PRISM_CENTRAL_API_KEY "
-                "or both PRISM_CENTRAL_USERNAME and PRISM_CENTRAL_PASSWORD."
-            )
+        raise ValueError(
+            "No credentials configured. Set both PRISM_CENTRAL_USERNAME "
+            "and PRISM_CENTRAL_PASSWORD."
+        )
 
 
 def get_settings() -> Settings:
     """Get the application settings, with validation."""
     try:
-        return Settings()
+        return Settings()  # type: ignore[call-arg]
     except Exception as e:
         print(f"Configuration error: {e}", file=sys.stderr)
         sys.exit(1)

@@ -1,6 +1,6 @@
 """Prism Central API client."""
 
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import httpx
 
@@ -43,9 +43,9 @@ class ValidationError(PrismCentralError):
 
 
 class PrismCentralClient:
-    """HTTP client for Prism Central v4 API."""
+    """HTTP client for Prism Central v3 API."""
 
-    API_VERSION = "v4.0"
+    API_VERSION = "v3"
 
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -199,7 +199,7 @@ class PrismCentralClient:
         if response.status_code == 204:
             return {"status": "success"}
 
-        return response.json()
+        return cast(dict[str, Any], response.json())
 
     async def list(
         self,

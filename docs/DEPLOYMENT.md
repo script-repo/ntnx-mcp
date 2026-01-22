@@ -4,7 +4,7 @@
 
 - Python 3.10 or higher
 - Access to Nutanix Prism Central (pc.2024.3+ recommended)
-- Prism Central credentials (username/password or API key)
+- Prism Central credentials (username/password)
 
 ## Quick Start
 
@@ -31,7 +31,7 @@ PRISM_CENTRAL_HOST=your-pc-ip-or-hostname
 PRISM_CENTRAL_USERNAME=admin
 PRISM_CENTRAL_PASSWORD=your-password
 PRISM_CENTRAL_PORT=9440
-PRISM_CENTRAL_VERIFY_SSL=true
+PRISM_CENTRAL_VERIFY_SSL=false
 ```
 
 Or export environment variables:
@@ -40,6 +40,7 @@ Or export environment variables:
 export PRISM_CENTRAL_HOST=192.168.1.100
 export PRISM_CENTRAL_USERNAME=admin
 export PRISM_CENTRAL_PASSWORD=secretpassword
+export PRISM_CENTRAL_VERIFY_SSL=false
 ```
 
 ### 3. Run
@@ -54,18 +55,97 @@ uv run ntnx-mcp
 
 ---
 
+## Platform-Specific Deployment
+
+### Windows (PowerShell)
+
+```powershell
+git clone https://github.com/script-repo/ntnx-mcp.git
+cd ntnx-mcp
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+
+$env:PRISM_CENTRAL_HOST="192.168.1.100"
+$env:PRISM_CENTRAL_USERNAME="admin"
+$env:PRISM_CENTRAL_PASSWORD="your-password"
+$env:PRISM_CENTRAL_VERIFY_SSL="false"
+
+python -m ntnx_mcp
+```
+
+### WSL (Ubuntu)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-venv git
+
+git clone https://github.com/script-repo/ntnx-mcp.git
+cd ntnx-mcp
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+export PRISM_CENTRAL_HOST=192.168.1.100
+export PRISM_CENTRAL_USERNAME=admin
+export PRISM_CENTRAL_PASSWORD=your-password
+export PRISM_CENTRAL_VERIFY_SSL=false
+
+python -m ntnx_mcp
+```
+
+### Linux
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-venv git
+
+git clone https://github.com/script-repo/ntnx-mcp.git
+cd ntnx-mcp
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+export PRISM_CENTRAL_HOST=192.168.1.100
+export PRISM_CENTRAL_USERNAME=admin
+export PRISM_CENTRAL_PASSWORD=your-password
+export PRISM_CENTRAL_VERIFY_SSL=false
+
+python -m ntnx_mcp
+```
+
+### macOS
+
+```bash
+git clone https://github.com/script-repo/ntnx-mcp.git
+cd ntnx-mcp
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+
+export PRISM_CENTRAL_HOST=192.168.1.100
+export PRISM_CENTRAL_USERNAME=admin
+export PRISM_CENTRAL_PASSWORD=your-password
+export PRISM_CENTRAL_VERIFY_SSL=false
+
+python -m ntnx_mcp
+```
+
+---
+
 ## Configuration Options
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `PRISM_CENTRAL_HOST` | Yes | - | Prism Central IP or FQDN |
-| `PRISM_CENTRAL_USERNAME` | Yes* | - | Username for authentication |
-| `PRISM_CENTRAL_PASSWORD` | Yes* | - | Password for authentication |
-| `PRISM_CENTRAL_API_KEY` | Yes* | - | API key (alternative to user/pass) |
+| `PRISM_CENTRAL_USERNAME` | Yes | - | Username for authentication |
+| `PRISM_CENTRAL_PASSWORD` | Yes | - | Password for authentication |
 | `PRISM_CENTRAL_PORT` | No | 9440 | Prism Central API port |
-| `PRISM_CENTRAL_VERIFY_SSL` | No | true | Verify SSL certificates |
-
-*Either username/password OR API key is required
+| `PRISM_CENTRAL_VERIFY_SSL` | No | false | Verify SSL certificates |
 
 ---
 
@@ -149,6 +229,7 @@ docker run -it \
   -e PRISM_CENTRAL_HOST=192.168.1.100 \
   -e PRISM_CENTRAL_USERNAME=admin \
   -e PRISM_CENTRAL_PASSWORD=your-password \
+  -e PRISM_CENTRAL_VERIFY_SSL=false \
   ntnx-mcp
 ```
 
@@ -163,6 +244,7 @@ services:
       - PRISM_CENTRAL_HOST=${PRISM_CENTRAL_HOST}
       - PRISM_CENTRAL_USERNAME=${PRISM_CENTRAL_USERNAME}
       - PRISM_CENTRAL_PASSWORD=${PRISM_CENTRAL_PASSWORD}
+      - PRISM_CENTRAL_VERIFY_SSL=${PRISM_CENTRAL_VERIFY_SSL:-false}
     stdin_open: true
     tty: true
 ```
@@ -175,29 +257,12 @@ services:
 
 - Never commit credentials to version control
 - Use environment variables or secret management
-- Consider using Nutanix IAM API keys for automation
 
 ### Network
 
 - The MCP server connects to Prism Central on port 9440 (HTTPS)
 - Ensure network access between the MCP server host and Prism Central
-- For production, always use `PRISM_CENTRAL_VERIFY_SSL=true`
-
-### API Keys (Recommended for Automation)
-
-Create a service account with API key:
-
-```bash
-# Use the IAM API to create a service account and API key
-# See: https://developers.nutanix.com (IAM namespace)
-```
-
-Then configure:
-
-```bash
-PRISM_CENTRAL_HOST=192.168.1.100
-PRISM_CENTRAL_API_KEY=your-api-key
-```
+- For production, set `PRISM_CENTRAL_VERIFY_SSL=true` and trust the Prism Central CA
 
 ---
 
