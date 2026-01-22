@@ -28,7 +28,7 @@ def create_server(settings: Settings) -> tuple[Server, ToolExecutor]:
     for tool in all_tools:
         executor.register_tool(tool)
 
-    @server.list_tools()
+    @server.list_tools()  # type: ignore[untyped-decorator,no-untyped-call]
     async def list_tools() -> list[Tool]:
         """Return the list of available tools."""
         return [
@@ -40,7 +40,7 @@ def create_server(settings: Settings) -> tuple[Server, ToolExecutor]:
             for tool in all_tools
         ]
 
-    @server.call_tool()
+    @server.call_tool()  # type: ignore[untyped-decorator]
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Execute a tool and return the result."""
         result = await executor.execute(name, arguments or {})
@@ -65,8 +65,8 @@ async def run_server() -> None:
 
     if not settings.has_credentials:
         print(
-            "Error: No credentials configured. Set either PRISM_CENTRAL_API_KEY "
-            "or both PRISM_CENTRAL_USERNAME and PRISM_CENTRAL_PASSWORD.",
+            "Error: No credentials configured. Set both PRISM_CENTRAL_USERNAME "
+            "and PRISM_CENTRAL_PASSWORD.",
             file=sys.stderr,
         )
         sys.exit(1)

@@ -1,4 +1,4 @@
-"""Tool definitions for all Nutanix v4 API namespaces."""
+"""Tool definitions for all Nutanix v3 API namespaces."""
 
 from ntnx_mcp.tools.base import ODATA_PARAMS, create_get_tool, create_list_tool
 from ntnx_mcp.tools.registry import ToolRegistry, get_all_tools

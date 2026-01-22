@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Nutanix MCP Server exposes Prism Central v4 API operations as tools that AI agents can invoke. Each tool corresponds to an API operation within a namespace.
+The Nutanix MCP Server exposes Prism Central v3 API operations as tools that AI agents can invoke. Each tool corresponds to an API operation within a namespace.
 
 ## Tool Naming Convention
 

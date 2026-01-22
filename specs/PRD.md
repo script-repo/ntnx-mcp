@@ -2,7 +2,7 @@
 
 ## Overview
 
-An MCP (Model Context Protocol) server that provides AI agents with access to Nutanix Prism Central infrastructure through the v4 API. This enables AI-powered infrastructure management, monitoring, and automation.
+An MCP (Model Context Protocol) server that provides AI agents with access to Nutanix Prism Central infrastructure through the v3 API. This enables AI-powered infrastructure management, monitoring, and automation.
 
 ## Problem Statement
 
@@ -11,7 +11,7 @@ Infrastructure teams need to interact with Nutanix Prism Central for VM manageme
 ## Goals
 
 1. **Simplicity** - Easy to deploy, configure, and use
-2. **Completeness** - Support all v4 API namespaces
+2. **Completeness** - Support all v3 API namespaces
 3. **Security** - Secure credential handling
 4. **Reliability** - Robust error handling and logging
 
@@ -23,9 +23,9 @@ Infrastructure teams need to interact with Nutanix Prism Central for VM manageme
 
 ---
 
-## Supported Namespaces (v4 API)
+## Supported Namespaces (v3 API)
 
-The MCP server exposes tools for all 18 Nutanix v4 API namespaces:
+The MCP server exposes tools for all 18 Nutanix v3 API namespaces:
 
 | Namespace | Endpoint | Description |
 |-----------|----------|-------------|
@@ -54,7 +54,6 @@ The MCP server exposes tools for all 18 Nutanix v4 API namespaces:
 
 ### FR-1: Authentication
 - Support HTTP Basic Authentication (username/password)
-- Support IAM API keys for service accounts
 - Credentials via environment variables
 - Never log or expose credentials
 
@@ -101,7 +100,7 @@ Each namespace exposes tools following this pattern:
 
 ### NFR-3: Compatibility
 - Python 3.10+
-- Prism Central pc.2024.3+ (for full v4 API support)
+- Prism Central pc.2024.3+ (for full v3 API support)
 - AOS 7.0+
 
 ### NFR-4: Transport
@@ -134,11 +133,11 @@ Each namespace exposes tools following this pattern:
 │  │  - OData query building                          │  │
 │  └───────────────────────────────────────────────────┘  │
 └─────────────────────────┬───────────────────────────────┘
-                          │ HTTPS (v4 REST API)
+                          │ HTTPS (v3 REST API)
                           ▼
 ┌─────────────────────────────────────────────────────────┐
 │                 Nutanix Prism Central                   │
-│                    (v4 API)                             │
+│                    (v3 API)                             │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -151,13 +150,10 @@ Environment variables:
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `PRISM_CENTRAL_HOST` | Yes | Prism Central IP or hostname |
-| `PRISM_CENTRAL_USERNAME` | Yes* | Username for basic auth |
-| `PRISM_CENTRAL_PASSWORD` | Yes* | Password for basic auth |
-| `PRISM_CENTRAL_API_KEY` | Yes* | API key (alternative to user/pass) |
+| `PRISM_CENTRAL_USERNAME` | Yes | Username for basic auth |
+| `PRISM_CENTRAL_PASSWORD` | Yes | Password for basic auth |
 | `PRISM_CENTRAL_PORT` | No | Port (default: 9440) |
-| `PRISM_CENTRAL_VERIFY_SSL` | No | Verify SSL certs (default: true) |
-
-*Either username/password OR API key required
+| `PRISM_CENTRAL_VERIFY_SSL` | No | Verify SSL certs (default: false) |
 
 ---
 
@@ -246,7 +242,7 @@ Environment variables:
 
 ## References
 
-- [Nutanix v4 API Documentation](https://developers.nutanix.com)
-- [Nutanix v4 API Introduction](https://www.nutanix.dev/api-reference-v4/)
+- [Nutanix v3 API Documentation](https://developers.nutanix.com)
+- [Nutanix v3 API Introduction](https://www.nutanix.dev/api-reference-v3/)
 - [MCP Specification](https://modelcontextprotocol.io/specification/latest)
 - [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)

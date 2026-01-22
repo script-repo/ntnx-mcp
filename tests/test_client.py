@@ -24,13 +24,13 @@ def client(settings):
 def test_build_url(client):
     """Test URL building."""
     url = client._build_url("vmm", "ahv/config/vms")
-    assert url == "/vmm/v4.0/ahv/config/vms"
+    assert url == "/vmm/v3/ahv/config/vms"
 
 
 def test_build_url_custom_version(client):
     """Test URL building with custom version."""
-    url = client._build_url("vmm", "ahv/config/vms", version="v4.0.a1")
-    assert url == "/vmm/v4.0.a1/ahv/config/vms"
+    url = client._build_url("vmm", "ahv/config/vms", version="v3.1")
+    assert url == "/vmm/v3.1/ahv/config/vms"
 
 
 def test_build_query_params_empty(client):

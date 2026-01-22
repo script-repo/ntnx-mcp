@@ -1,13 +1,13 @@
 # Nutanix Prism Central MCP Server
 
-An MCP (Model Context Protocol) server that connects AI agents to Nutanix Prism Central via the v4 API.
+An MCP (Model Context Protocol) server that connects AI agents to Nutanix Prism Central via the v3 API.
 
 ## Features
 
-- **Full v4 API Coverage** - Access all 18 Prism Central namespaces
+- **Full v3 API Coverage** - Access all 18 Prism Central namespaces
 - **Simple Setup** - Configure with environment variables
 - **OData Support** - Filter, sort, and paginate results
-- **Secure** - Supports basic auth and API keys
+- **Secure** - Supports basic auth with username/password
 
 ## Quick Start
 
@@ -19,6 +19,7 @@ pip install -e .
 export PRISM_CENTRAL_HOST=192.168.1.100
 export PRISM_CENTRAL_USERNAME=admin
 export PRISM_CENTRAL_PASSWORD=your-password
+export PRISM_CENTRAL_VERIFY_SSL=false
 
 # Run
 python -m ntnx_mcp
@@ -86,7 +87,7 @@ Once connected, ask your AI agent:
 ## Requirements
 
 - Python 3.10+
-- Nutanix Prism Central pc.2024.3+ (for full v4 API support)
+- Nutanix Prism Central pc.2024.3+ (for full v3 API support)
 - Network access to Prism Central (port 9440)
 
 ## License
