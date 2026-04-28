@@ -1,6 +1,7 @@
 """Prism Central API client."""
 
-from typing import Any, Optional, cast
+import uuid as _uuid
+from typing import Any, Optional
 
 import httpx
 
@@ -43,13 +44,59 @@ class ValidationError(PrismCentralError):
 
 
 class PrismCentralClient:
-    """HTTP client for Prism Central v3 API."""
+    """HTTP client for Prism Central v4 API."""
 
-    API_VERSION = "v3"
+    API_VERSION = "v4.0"
 
     def __init__(self, settings: Settings):
         self.settings = settings
         self._client: Optional[httpx.AsyncClient] = None
+
+    async def v3_list(
+        self,
+        resource: str,
+        kind: str,
+        filter: Optional[str] = None,
+        length: int = 100,
+        offset: int = 0,
+    ) -> dict[str, Any]:
+        """List entities using v3 API (POST with body filter).
+        
+        The v3 API uses POST /api/nutanix/v3/{resource}/list with filter in body.
+        """
+        client = await self._get_client()
+        url = f"/nutanix/v3/{resource}/list"
+        
+        body: dict[str, Any] = {
+            "kind": kind,
+            "length": length,
+            "offset": offset,
+        }
+        if filter:
+            body["filter"] = filter
+        
+        try:
+            response = await client.request(
+                method="POST",
+                url=url,
+                json=body,
+            )
+        except httpx.ConnectError as e:
+            raise PrismCentralError(
+                f"Connection failed to {self.settings.host}:{self.settings.port}. "
+                "Verify the host is accessible and the port is correct.",
+                details=str(e),
+            )
+        except httpx.TimeoutException as e:
+            raise PrismCentralError(
+                f"Request timed out after {self.settings.timeout} seconds.",
+                details=str(e),
+            )
+
+        if response.status_code >= 400:
+            self._handle_error(response)
+
+        return response.json()
 
     async def _get_client(self) -> httpx.AsyncClient:
         """Get or create the HTTP client."""
@@ -199,7 +246,7 @@ class PrismCentralClient:
         if response.status_code == 204:
             return {"status": "success"}
 
-        return cast(dict[str, Any], response.json())
+        return response.json()
 
     async def list(
         self,
@@ -295,3 +342,89 @@ class PrismCentralClient:
         return await self.request(
             "POST", namespace, full_path, body=body, request_id=request_id, version=version
         )
+
+    async def get_with_etag(
+        self,
+        namespace: str,
+        path: str,
+        entity_id: str,
+        version: Optional[str] = None,
+    ) -> tuple[dict[str, Any], str]:
+        """GET an entity and return (body, etag) for optimistic concurrency.
+
+        The v4 update workflow requires the ETag from a prior GET to be sent
+        back via the ``If-Match`` header on the subsequent PUT.
+        """
+        client = await self._get_client()
+        url = self._build_url(namespace, f"{path}/{entity_id}", version)
+
+        try:
+            response = await client.request(method="GET", url=url)
+        except httpx.ConnectError as e:
+            raise PrismCentralError(
+                f"Connection failed to {self.settings.host}:{self.settings.port}. "
+                "Verify the host is accessible and the port is correct.",
+                details=str(e),
+            )
+        except httpx.TimeoutException as e:
+            raise PrismCentralError(
+                f"Request timed out after {self.settings.timeout} seconds.",
+                details=str(e),
+            )
+
+        if response.status_code >= 400:
+            self._handle_error(response)
+
+        etag = response.headers.get("etag", "")
+        if not etag:
+            raise PrismCentralError(
+                "Server did not return an ETag header, cannot perform safe update.",
+                status_code=response.status_code,
+            )
+
+        return response.json(), etag
+
+    async def update_with_etag(
+        self,
+        namespace: str,
+        path: str,
+        entity_id: str,
+        body: dict[str, Any],
+        etag: str,
+        version: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """PUT an entity with ``If-Match`` (ETag) and ``Ntnx-Request-Id``.
+
+        This is the standard v4 optimistic-concurrency update pattern.
+        """
+        client = await self._get_client()
+        url = self._build_url(namespace, f"{path}/{entity_id}", version)
+        request_id = str(_uuid.uuid4())
+        headers = {
+            "If-Match": etag,
+            "Ntnx-Request-Id": request_id,
+        }
+
+        try:
+            response = await client.request(
+                method="PUT", url=url, json=body, headers=headers,
+            )
+        except httpx.ConnectError as e:
+            raise PrismCentralError(
+                f"Connection failed to {self.settings.host}:{self.settings.port}. "
+                "Verify the host is accessible and the port is correct.",
+                details=str(e),
+            )
+        except httpx.TimeoutException as e:
+            raise PrismCentralError(
+                f"Request timed out after {self.settings.timeout} seconds.",
+                details=str(e),
+            )
+
+        if response.status_code >= 400:
+            self._handle_error(response)
+
+        if response.status_code == 204:
+            return {"status": "success"}
+
+        return response.json()

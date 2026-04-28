@@ -18,6 +18,33 @@ class ToolRegistry:
     def vmm_tools() -> list[dict[str, Any]]:
         """Virtual Machine Management tools."""
         return [
+            {
+                "name": "v3_vms_list",
+                "description": "List virtual machines using v3 API (use this for older Prism Central or when v4 fails)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "filter": {
+                            "type": "string",
+                            "description": "Filter expression (e.g., 'vm_name==db.*' for VMs starting with 'db')",
+                        },
+                        "length": {
+                            "type": "integer",
+                            "description": "Maximum number of results (default: 100)",
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "description": "Offset for pagination (default: 0)",
+                        },
+                    },
+                },
+                "metadata": {
+                    "namespace": "v3",
+                    "entity": "vms",
+                    "operation": "v3_list",
+                    "kind": "vm",
+                },
+            },
             create_list_tool(
                 "vmm_list",
                 "vmm",
@@ -58,51 +85,98 @@ class ToolRegistry:
                 id_param="vm_id",
                 id_description="Virtual machine ID (UUID)",
             ),
-            create_action_tool(
-                "vmm_power_on",
-                "vmm",
-                "ahv/config/vms",
-                "power-on",
-                "Power on a virtual machine",
-                id_param="vm_id",
-                id_description="Virtual machine ID (UUID)",
-            ),
-            create_action_tool(
-                "vmm_power_off",
-                "vmm",
-                "ahv/config/vms",
-                "power-off",
-                "Power off a virtual machine",
-                id_param="vm_id",
-                id_description="Virtual machine ID (UUID)",
-            ),
-            create_action_tool(
-                "vmm_reset",
-                "vmm",
-                "ahv/config/vms",
-                "reset",
-                "Reset (hard reboot) a virtual machine",
-                id_param="vm_id",
-                id_description="Virtual machine ID (UUID)",
-            ),
-            create_action_tool(
-                "vmm_guest_shutdown",
-                "vmm",
-                "ahv/config/vms",
-                "guest-shutdown",
-                "Gracefully shutdown a VM via guest tools",
-                id_param="vm_id",
-                id_description="Virtual machine ID (UUID)",
-            ),
-            create_action_tool(
-                "vmm_guest_reboot",
-                "vmm",
-                "ahv/config/vms",
-                "guest-reboot",
-                "Gracefully reboot a VM via guest tools",
-                id_param="vm_id",
-                id_description="Virtual machine ID (UUID)",
-            ),
+            {
+                "name": "vmm_power_on",
+                "description": "Power on a virtual machine",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "vm_id": {"type": "string", "description": "Virtual machine ID (UUID)"},
+                    },
+                    "required": ["vm_id"],
+                },
+                "metadata": {
+                    "namespace": "vmm",
+                    "entity": "ahv/config/vms",
+                    "operation": "power_state",
+                    "target_power_state": "ON",
+                    "id_param": "vm_id",
+                },
+            },
+            {
+                "name": "vmm_power_off",
+                "description": "Power off a virtual machine (hard power off)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "vm_id": {"type": "string", "description": "Virtual machine ID (UUID)"},
+                    },
+                    "required": ["vm_id"],
+                },
+                "metadata": {
+                    "namespace": "vmm",
+                    "entity": "ahv/config/vms",
+                    "operation": "power_state",
+                    "target_power_state": "OFF",
+                    "id_param": "vm_id",
+                },
+            },
+            {
+                "name": "vmm_guest_shutdown",
+                "description": "Gracefully shutdown a VM (ACPI signal)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "vm_id": {"type": "string", "description": "Virtual machine ID (UUID)"},
+                    },
+                    "required": ["vm_id"],
+                },
+                "metadata": {
+                    "namespace": "vmm",
+                    "entity": "ahv/config/vms",
+                    "operation": "power_state",
+                    "target_power_state": "OFF",
+                    "id_param": "vm_id",
+                },
+            },
+            {
+                "name": "vmm_reset",
+                "description": "Reset (hard reboot) a virtual machine by powering off then on",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "vm_id": {"type": "string", "description": "Virtual machine ID (UUID)"},
+                    },
+                    "required": ["vm_id"],
+                },
+                "metadata": {
+                    "namespace": "vmm",
+                    "entity": "ahv/config/vms",
+                    "operation": "power_state",
+                    "target_power_state": "OFF",
+                    "id_param": "vm_id",
+                    "then_power_on": True,
+                },
+            },
+            {
+                "name": "vmm_guest_reboot",
+                "description": "Reboot a VM by gracefully shutting down then powering on",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "vm_id": {"type": "string", "description": "Virtual machine ID (UUID)"},
+                    },
+                    "required": ["vm_id"],
+                },
+                "metadata": {
+                    "namespace": "vmm",
+                    "entity": "ahv/config/vms",
+                    "operation": "power_state",
+                    "target_power_state": "OFF",
+                    "id_param": "vm_id",
+                    "then_power_on": True,
+                },
+            },
             create_list_tool(
                 "vmm_images_list",
                 "vmm",
@@ -223,17 +297,17 @@ class ToolRegistry:
 
     @staticmethod
     def storage_tools() -> list[dict[str, Any]]:
-        """Storage tools."""
+        """Storage tools (under clustermgmt namespace in v4)."""
         return [
             create_list_tool(
                 "storage_containers_list",
-                "storage",
+                "clustermgmt",
                 "config/storage-containers",
                 "List storage containers",
             ),
             create_get_tool(
                 "storage_container_get",
-                "storage",
+                "clustermgmt",
                 "config/storage-containers",
                 "Get storage container details by ID",
                 id_param="container_id",
@@ -289,18 +363,18 @@ class ToolRegistry:
 
     @staticmethod
     def monitoring_tools() -> list[dict[str, Any]]:
-        """Monitoring tools."""
+        """Monitoring tools (v4 uses serviceability/ sub-path, not config/)."""
         return [
             create_list_tool(
                 "monitoring_alerts_list",
                 "monitoring",
-                "config/alerts",
+                "serviceability/alerts",
                 "List alerts",
             ),
             create_get_tool(
                 "monitoring_alert_get",
                 "monitoring",
-                "config/alerts",
+                "serviceability/alerts",
                 "Get alert details by ID",
                 id_param="alert_id",
                 id_description="Alert ID (UUID)",
@@ -308,7 +382,7 @@ class ToolRegistry:
             create_action_tool(
                 "monitoring_alert_acknowledge",
                 "monitoring",
-                "config/alerts",
+                "serviceability/alerts",
                 "acknowledge",
                 "Acknowledge an alert",
                 id_param="alert_id",
@@ -317,7 +391,7 @@ class ToolRegistry:
             create_action_tool(
                 "monitoring_alert_resolve",
                 "monitoring",
-                "config/alerts",
+                "serviceability/alerts",
                 "resolve",
                 "Resolve an alert",
                 id_param="alert_id",
@@ -326,13 +400,13 @@ class ToolRegistry:
             create_list_tool(
                 "monitoring_events_list",
                 "monitoring",
-                "config/events",
+                "serviceability/events",
                 "List events",
             ),
             create_list_tool(
                 "monitoring_audits_list",
                 "monitoring",
-                "config/audits",
+                "serviceability/audits",
                 "List audit logs",
             ),
         ]
@@ -341,20 +415,33 @@ class ToolRegistry:
     def dataprotection_tools() -> list[dict[str, Any]]:
         """Data Protection tools."""
         return [
-            create_list_tool(
-                "dataprotection_policies_list",
-                "dataprotection",
-                "config/protection-policies",
-                "List protection policies",
-            ),
-            create_get_tool(
-                "dataprotection_policy_get",
-                "dataprotection",
-                "config/protection-policies",
-                "Get protection policy details by ID",
-                id_param="policy_id",
-                id_description="Protection policy ID (UUID)",
-            ),
+            {
+                "name": "v3_protection_rules_list",
+                "description": "List protection rules/policies (v3 fallback -- not available in v4 on this PC build)",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "filter": {
+                            "type": "string",
+                            "description": "Filter expression",
+                        },
+                        "length": {
+                            "type": "integer",
+                            "description": "Maximum number of results (default: 100)",
+                        },
+                        "offset": {
+                            "type": "integer",
+                            "description": "Offset for pagination (default: 0)",
+                        },
+                    },
+                },
+                "metadata": {
+                    "namespace": "v3",
+                    "entity": "protection_rules",
+                    "operation": "v3_list",
+                    "kind": "protection_rule",
+                },
+            },
             create_list_tool(
                 "dataprotection_recovery_points_list",
                 "dataprotection",
@@ -368,6 +455,12 @@ class ToolRegistry:
                 "Get recovery point details by ID",
                 id_param="recovery_point_id",
                 id_description="Recovery point ID (UUID)",
+            ),
+            create_list_tool(
+                "dataprotection_consistency_groups_list",
+                "dataprotection",
+                "config/consistency-groups",
+                "List consistency groups",
             ),
         ]
 
@@ -512,21 +605,6 @@ class ToolRegistry:
                 "config/scenarios",
                 "List what-if scenarios",
             ),
-            {
-                "name": "aiops_vm_rightsizing_list",
-                "description": "Get VM rightsizing recommendations",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        **ODATA_PARAMS,
-                    },
-                },
-                "metadata": {
-                    "namespace": "aiops",
-                    "entity": "resources/vm-efficiency",
-                    "operation": "list",
-                },
-            },
         ]
 
     @staticmethod
@@ -602,22 +680,8 @@ class ToolRegistry:
 
     @staticmethod
     def security_tools() -> list[dict[str, Any]]:
-        """Security tools."""
-        return [
-            {
-                "name": "security_config_get",
-                "description": "Get security configuration",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {},
-                },
-                "metadata": {
-                    "namespace": "security",
-                    "entity": "config/security-config",
-                    "operation": "get_single",
-                },
-            },
-        ]
+        """Security tools (security_config_get removed -- not available in v4 on this PC build)."""
+        return []
 
     @staticmethod
     def datapolicies_tools() -> list[dict[str, Any]]:

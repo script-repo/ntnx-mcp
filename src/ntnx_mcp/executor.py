@@ -1,5 +1,6 @@
 """Tool execution logic - translates MCP tool calls to API requests."""
 
+import asyncio
 import uuid
 from typing import Any, Optional
 
@@ -41,7 +42,9 @@ class ToolExecutor:
             }
 
         try:
-            if operation == "list":
+            if operation == "v3_list":
+                return await self._execute_v3_list(entity, metadata, arguments)
+            elif operation == "list":
                 return await self._execute_list(namespace, entity, arguments)
             elif operation == "get":
                 return await self._execute_get(namespace, entity, metadata, arguments)
@@ -53,6 +56,8 @@ class ToolExecutor:
                 return await self._execute_delete(namespace, entity, metadata, arguments)
             elif operation == "action":
                 return await self._execute_action(namespace, entity, metadata, arguments)
+            elif operation == "power_state":
+                return await self._execute_power_state(namespace, entity, metadata, arguments)
             else:
                 return {
                     "error": {
@@ -71,6 +76,19 @@ class ToolExecutor:
             }
         except Exception as e:
             return {"error": {"code": "INTERNAL_ERROR", "message": str(e)}}
+
+    async def _execute_v3_list(
+        self, entity: str, metadata: dict[str, Any], arguments: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Execute a v3 list operation (POST with body filter)."""
+        kind = metadata.get("kind", entity)
+        return await self.client.v3_list(
+            resource=entity,
+            kind=kind,
+            filter=arguments.get("filter"),
+            length=arguments.get("length", 100),
+            offset=arguments.get("offset", 0),
+        )
 
     async def _execute_list(
         self, namespace: str, entity: str, arguments: dict[str, Any]
@@ -186,6 +204,67 @@ class ToolExecutor:
             request_id=request_id,
         )
 
+    async def _execute_power_state(
+        self, namespace: str, entity: str, metadata: dict[str, Any], arguments: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Change a VM's power state using the v4 ETag-based PUT workflow.
+
+        The v4 $actions endpoints are not available on all PC builds, so we
+        GET the VM (capturing the ETag), modify the ``powerState`` field,
+        and PUT it back with ``If-Match`` + ``Ntnx-Request-Id``.
+        """
+        id_param = metadata.get("id_param", "vm_id")
+        target_state = metadata.get("target_power_state", "OFF")
+        then_power_on = metadata.get("then_power_on", False)
+        entity_id = arguments.get(id_param)
+
+        if not entity_id:
+            return {
+                "error": {
+                    "code": "MISSING_PARAM",
+                    "message": f"Missing required parameter: {id_param}",
+                }
+            }
+
+        data, etag = await self.client.get_with_etag(namespace, entity, entity_id)
+
+        vm_body = data.get("data", data)
+        current_state = vm_body.get("powerState", "UNKNOWN")
+
+        if current_state == target_state and not then_power_on:
+            return {
+                "status": "no_change",
+                "message": f"VM is already {target_state}",
+                "powerState": current_state,
+            }
+
+        vm_body["powerState"] = target_state
+        result = await self.client.update_with_etag(namespace, entity, entity_id, vm_body, etag)
+
+        if then_power_on:
+            await asyncio.sleep(5)
+
+            for attempt in range(12):
+                check_data, check_etag = await self.client.get_with_etag(
+                    namespace, entity, entity_id
+                )
+                check_body = check_data.get("data", check_data)
+                if check_body.get("powerState") == "OFF":
+                    check_body["powerState"] = "ON"
+                    result = await self.client.update_with_etag(
+                        namespace, entity, entity_id, check_body, check_etag
+                    )
+                    return result
+                await asyncio.sleep(5)
+
+            return {
+                "status": "partial",
+                "message": "VM powered off but timed out waiting to power back on",
+                "initial_result": result,
+            }
+
+        return result
+
     def _build_create_body(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Build the request body for a create operation."""
         if tool_name == "vmm_create":
@@ -226,6 +305,7 @@ class ToolExecutor:
             disk: dict[str, Any] = {"diskAddress": {"busType": "SCSI", "index": 0}}
             if args.get("image_id"):
                 disk["backingInfo"] = {
+                    "$objectType": "vmm.v4.ahv.config.VmDisk",
                     "vmDisk": {
                         "diskSizeBytes": int(args.get("disk_size_gb", 50) * 1024 * 1024 * 1024),
                         "dataSource": {"reference": {"extId": args["image_id"]}}
@@ -233,6 +313,7 @@ class ToolExecutor:
                 }
             else:
                 disk["backingInfo"] = {
+                    "$objectType": "vmm.v4.ahv.config.VmDisk",
                     "vmDisk": {
                         "diskSizeBytes": int(args["disk_size_gb"] * 1024 * 1024 * 1024),
                     }
